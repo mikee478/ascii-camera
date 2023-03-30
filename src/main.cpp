@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include "renderer.h"
 #include "vertex_buffer.h"
@@ -14,6 +15,10 @@
 #include "vertex_array.h"
 #include "renderer.h"
 #include "input.h"
+#include "camera.h"
+#include "font_renderer.h"
+
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
@@ -21,8 +26,6 @@
 
 int main(void)
 {
-    srand(time(NULL));
-
     // Initialize the GLFW library
     if (!glfwInit())
         return -1;
@@ -41,9 +44,9 @@ int main(void)
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create a windowed mode window and its OpenGL context
-    const int WINDOW_WIDTH = 600;
-    const int WINDOW_HEIGHT = 600;
-    const char* WINDOW_TITLE = "Ascii Camera";
+    const int WINDOW_WIDTH = 700;
+    const int WINDOW_HEIGHT = 700;
+    const char* WINDOW_TITLE = "ASCII Camera";
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     if (!window) // Error
     {
@@ -75,30 +78,67 @@ int main(void)
 
     const glm::vec2 MIN_BOUND(0.0f, 0.0f);
     const glm::vec2 MAX_BOUND(static_cast<float>(WINDOW_WIDTH),static_cast<float>(WINDOW_HEIGHT));
-
     Shader::projection_mat = glm::ortho(MIN_BOUND.x, MAX_BOUND.x, MIN_BOUND.y, MAX_BOUND.y);
+
+    FontRenderer font_renderer("/Users/michael/Documents/projects/ascii-camera/res/fonts/Menlo.ttc", 8);
+
+    const int ROWS = 77;
+    const int COLS = 139;
+    std::vector<char> text(ROWS*(COLS+1), '\n');
+
+    Camera camera;
+    cv::Mat frame, flip, gray, crop;
+    cv::Mat resize_frame(ROWS, COLS, CV_8UC1);
+
+    std::string ascii_map = " .,:;i1tfLCG08@";
+    std::reverse(ascii_map.begin(), ascii_map.end());
+
+    glClearColor(1.0, 1.0, 1.0, 1.0);
 
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 150");
 
+    float contrast = 2.5;
+
     while (!glfwWindowShouldClose(window) && !Input::EscapePressed())
     {
         glfwPollEvents();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Configuration");
-        
-        ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
-        ImGui::End();
+        // ImGui_ImplOpenGL3_NewFrame();
+        // ImGui_ImplGlfw_NewFrame();
+        // ImGui::NewFrame();
+        // ImGui::Begin("Configuration");
+        // ImGui::SliderFloat("Contrast", &contrast, 0.0f, 10.0f);
+        // ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);
+        // ImGui::End();
 
         Clear();
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        if(camera.GetFrame(frame))
+        {
+            crop = frame(cv::Rect((frame.cols - frame.rows) / 2, 0, frame.rows, frame.rows));
+            cv::cvtColor(crop, gray, cv::COLOR_BGR2GRAY);
+            cv::flip(gray, flip, 1);
+            cv::resize(flip, resize_frame, resize_frame.size(), 0, 0, cv::INTER_AREA);
+
+            for(int r = 0;r<ROWS;r++)
+            {
+                for(int c = 0; c<COLS+1; c++)
+                {
+                    if(c == COLS) continue;
+                    double val = resize_frame.at<uchar>(r,c);
+                    val = std::clamp((val - 128) * contrast + 128, 0.0, 255.0);
+                    int index = floor(val / 256.0 * ascii_map.length());
+                    text[c + r * (COLS+1)] = ascii_map[index];
+                }
+            }
+
+            font_renderer.RenderText(text, 2, 690);
+        }
+
+        // ImGui::Render();
+        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Swap front and back buffers
         glfwSwapBuffers(window);

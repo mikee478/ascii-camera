@@ -14,10 +14,16 @@ target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 find_package(GLEW REQUIRED)
 target_link_libraries(${PROJECT_NAME} GLEW::GLEW)
 
+find_package(OpenCV REQUIRED)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+
+find_package(Freetype REQUIRED)
+target_link_libraries(${PROJECT_NAME} ${FREETYPE_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${FREETYPE_INCLUDE_DIRS})
+
 # Add include directories to a target
 # target_include_directories(${PROJECT_NAME} 
 # PRIVATE 
-#     /opt/homebrew/include # glm
 # )
 
 # Add sources to a target
@@ -34,6 +40,10 @@ PRIVATE
     src/index_buffer.h
     src/vertex_array.cpp
     src/vertex_array.h  
+    src/camera.cpp
+    src/camera.h
+    src/font_renderer.cpp
+    src/font_renderer.h
 
     src/imgui/imgui_demo.cpp
     src/imgui/imgui_draw.cpp
@@ -42,6 +52,8 @@ PRIVATE
     src/imgui/imgui_tables.cpp
     src/imgui/imgui_widgets.cpp
     src/imgui/imgui.cpp
+
+
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)

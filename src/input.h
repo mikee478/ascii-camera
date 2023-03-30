@@ -90,8 +90,6 @@ namespace Input
     void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         // ignore mouse button over imgui window 
-        if(ImGui::GetIO().WantCaptureMouse) 
-            return;
         if(action == GLFW_PRESS) mouse_button_pressed[button] = true;
         else if(action == GLFW_RELEASE) mouse_button_pressed[button] = false;
     }
